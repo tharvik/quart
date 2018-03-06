@@ -1043,6 +1043,7 @@ class Quart(PackageStatic):
             debug: Optional[bool]=None,
             access_log_format: str="%(h)s %(r)s %(s)s %(b)s %(D)s",
             timeout: int=5,
+            loop_handled: bool=False,
             **kwargs: Any,
     ) -> None:
         """Run this application.
@@ -1072,6 +1073,7 @@ class Quart(PackageStatic):
             run_app(
                 self, host=host, port=port, ssl=ssl, logger=create_serving_logger(),
                 access_log_format=access_log_format, timeout=timeout, debug=debug,
+                loop_handled=loop_handled,
             )
         finally:
             # Reset the first request, so as to enable reuse.

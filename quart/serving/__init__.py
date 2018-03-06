@@ -90,6 +90,7 @@ def run_app(
         logger: Optional[Logger]=None,
         timeout: int,
         debug: bool=False,
+        loop_handled: bool=False,
 ) -> None:
     """Create a server to run the app on given the options.
 
@@ -100,16 +101,25 @@ def run_app(
         ssl: Optional SSLContext to use.
         logger: Optional logger for serving (access) logs.
     """
+    async def create_server() -> asyncio.AbstractServer:
+        server = await loop.create_server(
+            lambda: Server(app, loop, logger, access_log_format, timeout),
+            host, port, ssl=ssl,
+        )
+
+        scheme = 'http' if ssl is None else 'https'
+        print("Running on {}://{}:{} (CTRL + C to quit)".format(scheme, host, port))  # noqa: T001
+
+        return server
+
     loop = asyncio.get_event_loop()
     loop.set_debug(debug)
-    create_server = loop.create_server(
-        lambda: Server(app, loop, logger, access_log_format, timeout),
-        host, port, ssl=ssl,
-    )
-    server = loop.run_until_complete(create_server)
 
-    scheme = 'http' if ssl is None else 'https'
-    print("Running on {}://{}:{} (CTRL + C to quit)".format(scheme, host, port))  # noqa: T001
+    if loop_handled:
+        loop.create_task(create_server())
+        return
+
+    server = loop.run_until_complete(create_server())
 
     try:
         loop.run_forever()
