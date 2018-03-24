@@ -4,6 +4,7 @@ import re
 from cgi import parse_header
 from datetime import datetime
 from email.utils import formatdate, parsedate_to_datetime
+from functools import wraps
 from shutil import copyfileobj
 from time import mktime
 from typing import Any, BinaryIO, Callable, Dict, Iterable, List, NamedTuple, Optional, Set, Type
@@ -379,3 +380,36 @@ class Range:
                 header += f"-{range_set.end}"
             header += ','
         return header.strip(',')
+
+
+def _on_update(method: Callable) -> Callable:
+    @wraps(method)
+    def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+        result = method(self, *args, **kwargs)
+        self.on_update(self)
+        return result
+    return wrapper
+
+
+class HeaderSet(set):
+
+    def __init__(self, *args: Any, on_update: Optional[Callable]=None, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.on_update = on_update
+
+    def to_header(self) -> str:
+        header = ', '.join(self)
+        return header.strip(',')
+
+    @classmethod
+    def from_header(
+            cls: Type['HeaderSet'], header: str, on_update: Optional[Callable]=None,
+    ) -> 'HeaderSet':
+        items = {item for item in parse_http_list(header)}
+        return cls(items, on_update=on_update)
+
+    add = _on_update(set.add)
+    clear = _on_update(set.clear)
+    pop = _on_update(set.pop)
+    remove = _on_update(set.remove)
+    update = _on_update(set.update)

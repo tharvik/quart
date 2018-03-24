@@ -1,6 +1,6 @@
 from quart.datastructures import (
-    _CacheControl, Accept, AcceptOption, CharsetAccept, ETags, LanguageAccept, MIMEAccept,
-    Range, RangeSet, RequestCacheControl, ResponseCacheControl,
+    _CacheControl, Accept, AcceptOption, CharsetAccept, ETags, HeaderSet, LanguageAccept,
+    MIMEAccept, Range, RangeSet, RequestCacheControl, ResponseCacheControl,
 )
 
 
@@ -88,3 +88,17 @@ def test_range() -> None:
     assert range_.units == 'bytes'
     assert range_.ranges == [RangeSet(-999, None)]
     assert range_.to_header() == 'bytes=-999'
+
+
+def test_header_set() -> None:
+    updated = False
+
+    def on_update(_: HeaderSet) -> None:
+        nonlocal updated
+        updated = True
+
+    header_set = HeaderSet.from_header('GET, HEAD', on_update=on_update)
+    assert header_set.to_header() in {'GET, HEAD', 'HEAD, GET'}
+    assert updated is False
+    header_set.add('PUT')
+    assert updated
